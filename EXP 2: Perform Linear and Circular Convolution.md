@@ -1,137 +1,99 @@
-# EXP 1(C) : Analysis of audio signal for noise removal
+# EXP 1 : Linear and Circular Convolution
 
 # AIM: 
-To analyse an audio signal and remove noise
+To perform Linear and Circular Convolution for two given sequence using SCILAB. 
 
-# APPARATUS REQUIRED:  
+# APPARATUS REQUIRED: 
 PC installed with SCILAB. 
 
-# PROGRAM: 
+# PROGRAM (Linear Convolution): 
 ```
-import numpy as np
-from scipy.io import wavfile
-import matplotlib.pyplot as plt
-from google.colab import files
-from IPython.display import Audio
+// Linear Convolution
+clc; clear;
+x = input("Enter x(n) as a row vector: ");   // e.g., [1 1 2 1]
+h = input("Enter h(n) as a row vector: ");   // e.g., [1 2 3 4]
 
-# ------------------------------------------------------------
-# 1️⃣ Upload your files (speech.wav and noise.wav)
-# ------------------------------------------------------------
-print("📁 Please upload 'speech.wav' and 'noise.wav'")
-uploaded = files.upload()  # Choose your two WAV files
+Nx = length(x); 
+Nh = length(h);
+Ny = Nx + Nh - 1; 
+y = zeros(1, Ny);
 
-# ------------------------------------------------------------
-# 2️⃣ Load signals
-# ------------------------------------------------------------
-fs_s, speech = wavfile.read('speech.wav')
-fs_n, noise  = wavfile.read('noise.wav')
-assert fs_s == fs_n, "❌ Sampling rates must match!"
-fs = fs_s
+// Linear convolution calculation
+for n = 1:Ny
+    acc = 0;
+    for k = 1:Nx
+        m = n - k + 1;
+        if (m >= 1 & m <= Nh) then
+            acc = acc + x(k) * h(m);
+        end
+    end
+    y(n) = acc;
+end
 
-# Convert to float [-1, 1]
-def to_float(x):
-    if x.dtype.kind == 'i':  # integer type
-        return x.astype(np.float32) / (np.iinfo(x.dtype).max + 1.0)
-    return x.astype(np.float32)
+disp(y, "Linear convolution y =");
 
-speech = to_float(speech)
-noise  = to_float(noise)
+// Plot input and output sequences
+subplot(3,1,1);
+plot2d3(0:Nx-1, x);   // stem plot for x(n)
+xtitle("Input sequence x(n)");
 
-# ------------------------------------------------------------
-# Convert stereo → mono if needed
-# ------------------------------------------------------------
-if speech.ndim > 1:
-    speech = np.mean(speech, axis=1)
-if noise.ndim > 1:
-    noise = np.mean(noise, axis=1)
+subplot(3,1,2);
+plot2d3(0:Nh-1, h);   // stem plot for h(n)
+xtitle("Impulse response h(n)");
 
-# ------------------------------------------------------------
-# Make sure both are same length
-# ------------------------------------------------------------
-L = min(len(speech), len(noise))
-speech = speech[:L]
-noise  = noise[:L]
-
-# ------------------------------------------------------------
-# 3️⃣ Mix the signals (adjust alpha for noise strength)
-# ------------------------------------------------------------
-alpha = 0.5
-mixed = speech + alpha * noise
-
-# ------------------------------------------------------------
-# 4️⃣ FFT-based filtering
-# ------------------------------------------------------------
-N = int(2 ** np.ceil(np.log2(L)))  # next power of two
-M = np.fft.rfft(mixed, n=N)
-freqs = np.fft.rfftfreq(N, 1/fs)
-
-# Band-pass mask for speech (300 Hz – 3400 Hz)
-low, high = 300.0, 3400.0
-mask = np.logical_and(freqs >= low, freqs <= high).astype(float)
-M_filtered = M * mask
-
-# Inverse FFT to reconstruct
-recovered = np.fft.irfft(M_filtered, n=N)[:L]
-recovered = recovered / (np.max(np.abs(recovered)) + 1e-12)
-
-# ------------------------------------------------------------
-# 5️⃣ Save the recovered audio
-# ------------------------------------------------------------
-wavfile.write('recovered_simple.wav', fs, (recovered * 32767).astype(np.int16))
-print("✅ Recovered audio saved as 'recovered_simple.wav'")
-
-# ------------------------------------------------------------
-# 6️⃣ Plot waveforms
-# ------------------------------------------------------------
-t = np.arange(L) / fs
-
-plt.figure(figsize=(12, 8))
-plt.subplot(3, 1, 1)
-plt.plot(t, speech)
-plt.title("Original Speech Signal")
-plt.xlabel("Time [s]"); plt.ylabel("Amplitude")
-
-plt.subplot(3, 1, 2)
-plt.plot(t, mixed)
-plt.title("Noisy Speech (Speech + Noise)")
-plt.xlabel("Time [s]")
-
-plt.subplot(3, 1, 3)
-plt.plot(t, recovered)
-plt.title("Recovered Speech after FFT Filtering")
-plt.xlabel("Time [s]")
-plt.tight_layout()
-plt.show()
-
-# ------------------------------------------------------------
-# 7️⃣ Plot Magnitude Spectra
-# ------------------------------------------------------------
-plt.figure(figsize=(10,5))
-plt.semilogy(freqs, np.abs(np.fft.rfft(mixed, n=N)), label='Noisy Speech')
-plt.semilogy(freqs, np.abs(M_filtered), label='Filtered Spectrum')
-plt.xlim(0, 8000)
-plt.legend()
-plt.xlabel('Frequency (Hz)')
-plt.title('Magnitude Spectra')
-plt.grid(True)
-plt.show()
-
-# ------------------------------------------------------------
-# 8️⃣ Listen to the signals
-# ------------------------------------------------------------
-print("🎧 Original Speech:")
-display(Audio(speech, rate=fs))
-print("🎧 Noisy (Mixed) Speech:")
-display(Audio(mixed, rate=fs))
-print("🎧 Recovered Speech:")
-display(Audio(recovered, rate=fs))
+subplot(3,1,3);
+plot2d3(0:Ny-1, y);   // stem plot for convolution
+xtitle("Linear Convolution y(n) = x(n) * h(n)");
 ```
+# PROGRAM (Circular Convolution): 
+```
+// Circular Convolution
+clc;
+clear;
 
-# OUTPUT:
-<img width="800" height="300" alt="image" src="https://github.com/user-attachments/assets/a14bbeb3-2a09-49c4-84f7-ad6ee730e696" />
+// Input signals
+x1 = input("Enter the first sequence x1: ");
+x2 = input("Enter the second sequence x2: ");
 
-<img width="800" height="300" alt="image" src="https://github.com/user-attachments/assets/6342be9a-c44e-4e1b-a12d-5569ae680d00" />
+// Make both signals of equal length by zero padding
+N = max(length(x1), length(x2));
+x1 = [x1, zeros(1, N-length(x1))];
+x2 = [x2, zeros(1, N-length(x2))];
 
-# RESULT:
-Thus ,the audio signal is made noise free by removing unwanted signals.
+// Step 1: Compute DFTs
+X1 = fft(x1, -1);   // DFT of x
+X2 = fft(x2, -1);   // DFT of h
 
+// Step 2: Multiply in frequency domain
+Y = X1 .* X2;
+
+// Step 3: Take IDFT to get circular convolution
+y_circ = fft(Y, 1);   // IDFT
+
+// Display results
+disp(y_circ, "Circular Convolution Result y(n) = ");
+
+// Plot input and output signals
+subplot(3,1,1);
+plot2d3(0:N-1, x1);
+xlabel("n"); ylabel("x(n)");
+title("Input Signal x(n)");
+
+subplot(3,1,2);
+plot2d3(0:N-1, x2);
+xlabel("n"); ylabel("h(n)");
+title("Input Signal h(n)");
+
+subplot(3,1,3);
+plot2d3(0:N-1, real(y_circ)); // real part is the result
+xlabel("n"); ylabel("y(n)");
+title("Circular Convolution Output");
+```
+# OUTPUT (Linear Convolution): 
+![WhatsApp Image 2025-09-08 at 15 17 39_21bd9f19](https://github.com/user-attachments/assets/c42864a6-aeda-4ffa-be31-1edcb7b95086)
+
+# OUTPUT (Circular Convolution): 
+![WhatsApp Image 2025-09-08 at 15 07 12_51524167](https://github.com/user-attachments/assets/f72003d5-4abe-454e-992c-b0cb159f5683)
+
+# RESULT: 
+Linear and Circular Convolution for two given sequence using SCILAB are performed.
